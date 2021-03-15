@@ -1,0 +1,74 @@
+import keras
+from keras import layers, models, optimizers
+from keras.datasets import mnist
+from keras.models import Sequential 
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+
+#As keras has multiple builtin datasets  
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+print(x_train.shape,x_test.shape,y_train.shape,y_test.shape)
+
+#rehaping the image so that it can work with keras API 
+#As keras API expect input in format of (number_of_images,rows,columns,dimension)
+x_train = x_train.reshape(x_train.shape[0],28,28,1)
+x_test = x_test.reshape(x_test.shape[0],28,28,1)
+print(x_train.shape,x_test.shape)
+
+#data scaling and normalization : basically done to make our algorithm make faster in processing
+x_train = x_train.astype("float32")
+x_test = x_test.astype("float32")
+
+#images from dark(black) to white denoted by [0,255]
+x_train /= 255 
+x_test /= 255 
+print(x_train.dtype,x_test.dtype)
+
+#to convert labels into one hot encoder using (to.categorical) so each and every classes will be independent to each other 
+num_classes = 10
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+print(y_train.shape)
+print(y_test.shape)
+
+#construct CNN
+#As i have multiple outputs layers from 0 to 9 , i should use Sequential model
+model = Sequential()
+
+# add number of filters , filter size , strides,padding =valid means no padding and p=same means same dimension will remain of input , input
+#relu is important because it introduces non-linearity and gives modified version of image
+#now input is multiplied with weights and add bias ...entering into hidden layer
+model.add(Conv2D(32,kernel_size=(3,3),strides=(1,1),padding='Same',activation='relu',input_shape=(28,28,1)))
+
+model.add(Conv2D(64,3,activation='relu'))
+
+#pooling is important to reduce the dimension of input and does not reduce the dimension of filters...(2,2) is filter which multiplies with input mask size
+model.add(MaxPooling2D(pool_size=(2,2)))
+
+
+model.add(Conv2D(64,3,padding='Same',activation='relu'))
+
+#dropout is use to randomly on off the neurons in network
+model.add(Dropout(0.25))
+
+model.add(Conv2D(64,3,padding='Same',activation='relu'))
+model.add(MaxPooling2D(pool_size=(2,2)))
+
+#flatten : to pass pooling layer to fully-connected layer(dense) in 1-dimension array
+model.add(Flatten())
+
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.25))
+model.add(Dense(num_classes, activation='softmax'))
+
+optimizer = optimizers.Adam(learning_rate=0.001)
+model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+#train CNN
+model.fit(x_train, y_train,batch_size=128,epochs=10,verbose=1,validation_data=(x_test, y_test))
+
+model.summary()
+
+score = model.evaluate(x_test, y_test, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
